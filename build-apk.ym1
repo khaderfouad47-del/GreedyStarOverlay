@@ -1,0 +1,35 @@
+name: بناء APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: تحميل المشروع
+        uses: actions/checkout@v4
+
+      - name: إعداد Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: فك ملف المشروع
+        run: |
+          unzip -o GreedyStarOverlay_Android_Project_READY.zip -d project
+          find project -maxdepth 3 -type f | head -50
+
+      - name: بناء APK
+        working-directory: project
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: حفظ APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GreedyStarOverlay-APK
+          path: project/**/build/outputs/apk/**/*.apk
