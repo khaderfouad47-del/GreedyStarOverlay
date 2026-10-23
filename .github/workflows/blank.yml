@@ -1,4 +1,5 @@
 
+name
 name: Build Android APK
 
 on:
@@ -18,22 +19,39 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Check Android project files
+      - name: Extract project ZIP
         run: |
-          echo "Checking project files..."
-          ls -la
-          test -f gradlew || (echo "ERROR: gradlew not found in repository root" && exit 1)
-          test -f settings.gradle -o -f settings.gradle.kts || (echo "ERROR: Gradle settings file not found" && exit 1)
-          test -d app || (echo "ERROR: app folder not found" && exit 1)
+          unzip -q GreedyStarOverlay_Android_Project_READY.zip -d extracted
+          echo "Files found in ZIP:"
+          find extracted -maxdepth 4 -type f | head -100
 
-      - name: Build debug APK
+      - name: Locate and build Android project
         run: |
+          WRAPPER=$(find extracted -type f -name gradlew -print -quit)
+
+          if [ -z "$WRAPPER" ]; then
+            echo "ERROR: gradlew is missing inside the ZIP."
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$WRAPPER")
+          cd "$PROJECT_DIR"
           chmod +x gradlew
           ./gradlew assembleDebug
+
+          APK=$(find . -type f -path '*/build/outputs/apk/debug/*.apk' -print -quit)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK was not generated."
+            exit 1
+          fi
+
+          cp "$APK" "$GITHUB_WORKSPACE/app-debug.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GreedyStarOverlay-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app-debug.apk
           if-no-files-found: error
+          
